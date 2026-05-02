@@ -1,3 +1,4 @@
+
 import React, { useState } from "react"
 import Title from "../components/Title"
 import UploadZone from "../components/UploadZone"
@@ -20,14 +21,17 @@ const Genetator = () => {
   const [productDescription, setProductDescription] = useState('')
   const [aspectRatio, setAspectRatio] = useState('9:16')
   const [productImage, setProductImage] = useState<File | null>(null)
-  const [modelImage, setModelImage] = useState<File | null>(null)
+  const [modelImages, setModelImages] = useState<File[]>([])
   const [userPrompt, setUserPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'product' | 'model')=>{
     if(e.target.files && e.target.files[0]){
       if(type === 'product') setProductImage(e.target.files[0]);
-      else setModelImage(e.target.files[0])
+      else {
+        const newFile = e.target.files[0];
+        if(modelImages.length < 5) setModelImages(prev => [...prev, newFile]);
+      }
     }
   }
 
@@ -35,7 +39,7 @@ const Genetator = () => {
     e.preventDefault();
     if(!user) return toast('Please login to generate')
 
-    if(!productImage || !modelImage || !name || !productName || !aspectRatio) return toast('Please fill all the required fields')
+    if(!productImage || modelImages.length === 0 || !name || !productName || !aspectRatio) return toast('Please fill all the required fields')
     
       try {
         setIsGenerating(true);
@@ -46,8 +50,8 @@ const Genetator = () => {
         formData.append('productDescription', productDescription)
         formData.append('userPrompt', userPrompt)
         formData.append('aspectRatio', aspectRatio)
-        formData.append('images', productImage)
-        formData.append('images', modelImage)
+        formData.append('images', productImage!)
+        modelImages.forEach(img => formData.append('images', img))
 
         const token = await getToken()
 
@@ -76,7 +80,24 @@ const Genetator = () => {
           <div className="flex flex-col w-full sm:max-w-60 gap-8 mt-8 mb-12">
             
             <UploadZone label="Product Image" file={productImage} onClear={()=>setProductImage(null)} onChange={(e)=>handleFileChange(e, 'product')}/>
-            <UploadZone label="Model Image" file={modelImage} onClear={()=>setModelImage(null)} onChange={(e)=>handleFileChange(e, 'model')}/>
+
+            {modelImages.map((img, index) => (
+              <UploadZone
+                key={index}
+                label={`Model Image ${index + 1}`}
+                file={img}
+                onClear={() => setModelImages(prev => prev.filter((_, i) => i !== index))}
+                onChange={(e) => handleFileChange(e, 'model')}
+              />
+            ))}
+            {modelImages.length < 5 && (
+              <UploadZone
+                label="Add Model Image"
+                file={null}
+                onClear={() => {}}
+                onChange={(e) => handleFileChange(e, 'model')}
+              />
+            )}
           </div>
 
           {/* right col  */}
@@ -91,7 +112,6 @@ const Genetator = () => {
             </div>
             <div className="mb-4 text-gray-300">
               <label htmlFor="productDescription" className="block text-sm mb-4">Product Description <span className="text-xs text-violet-400">(optional)</span></label>
-
               <textarea id="productDescription" rows={4} value={productDescription} onChange={(e)=>setProductDescription(e.target.value)} placeholder="Enter the description of the product"
                 className="w-full bg-white/3 rounded-lg border-2 p-4 text-sm border-violet-200/10 focus:border-violet-500/50 outline-none resize-none transition-all"/>
             </div>
@@ -106,7 +126,6 @@ const Genetator = () => {
 
             <div className="mb-4 text-gray-300">
               <label htmlFor="userPrompt" className="block text-sm mb-4">User Prompt <span className="text-xs text-violet-400">(optional)</span></label>
-
               <textarea id="userPrompt" rows={4} value={userPrompt} onChange={(e)=>setUserPrompt(e.target.value)} placeholder="Describe how you want the narration to be."
                 className="w-full bg-white/3 rounded-lg border-2 p-4 text-sm border-violet-200/10 focus:border-violet-500/50 outline-none resize-none transition-all"/>
             </div>

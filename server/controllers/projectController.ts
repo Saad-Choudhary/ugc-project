@@ -101,25 +101,24 @@ export const createProject = async (req:Request, res: Response) => {
             ]
          }
 
-         // image to base64 structure for ai model
-         const img1base64 = loadImage(images[0].path, images[0].mimetype);
-         const img2base64 = loadImage(images[1].path, images[1].mimetype);
+         // image to base64 structure for ai model — supports multiple model images
+const allImagesBase64 = images.map((img: any) => loadImage(img.path, img.mimetype));
 
-         const prompt = {
-            text: `Combine the person and product into a realistic photo.
-            Make the person naturally hold or use the product.
-            Match lighting, shadows, scale and perspective.
-            Make the person stand in professional studio lighting.
-            Output ecommerce-quality photo realistic imagery.
-            ${userPrompt}`
-         }
+const prompt = {
+    text: `Combine the person and product into a realistic photo.
+    Make the person naturally hold or use the product.
+    Match lighting, shadows, scale and perspective.
+    Make the person stand in professional studio lighting.
+    Output ecommerce-quality photo realistic imagery.
+    ${userPrompt}`
+}
 
-         // Generate the image using the ai model
-         const response: any = await ai.models.generateContent({
-            model,
-            contents: [img1base64, img2base64, prompt],
-            config: generationConfig,
-         })
+// Generate the image using the ai model
+const response: any = await ai.models.generateContent({
+    model,
+    contents: [...allImagesBase64, prompt],
+    config: generationConfig,
+})
 
          // Check if the response is valid
          if(!response?.candidates?.[0]?.content?.parts){
